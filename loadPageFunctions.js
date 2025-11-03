@@ -253,6 +253,13 @@ async function getSharedMutableResponse(c, next) {
 	}
 	dbg(trace, "getSharedMutableResponse: calling downstream next()")
 	const downstream = await next()
+	const downstreamResponse =
+		downstream instanceof Response
+			? downstream
+			: c.res instanceof Response
+			? c.res
+			: downstream
+
 	dbg(trace, "downstream returned", {
 		isResponse: downstream instanceof Response,
 		type: typeof downstream,
@@ -260,8 +267,14 @@ async function getSharedMutableResponse(c, next) {
 			downstream instanceof Response
 				? headersObj(downstream.headers)
 				: undefined,
+		usedContextRes: downstreamResponse !== downstream,
+		contextHeaders:
+			downstreamResponse !== downstream && downstreamResponse instanceof Response
+				? headersObj(downstreamResponse.headers)
+				: undefined,
 	})
-	shared = toMutableResponse(downstream, trace)
+
+	shared = toMutableResponse(downstreamResponse, trace)
 	c.set?.("__cf_mutable_response__", shared)
 	dbg(trace, "cached shared", {
 		status: shared.status,
